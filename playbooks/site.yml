@@ -1,0 +1,88 @@
+---
+# playbooks/site.yml
+- name: Apps | Docker (Ubuntu/Debian)
+  hosts: app
+  become: true
+  vars:
+    docker_packages_deb:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+  tasks:
+    - name: Install deps (deb)
+      apt:
+        name: "{{ docker_packages_deb }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Add Docker GPG (deb)
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Add Docker repo (deb)
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        filename: docker
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    - name: Install Docker CE (deb)
+      apt:
+        name: docker-ce,docker-ce-cli,containerd.io
+        state: present
+        update_cache: yes
+      when: ansible_os_family == 'Debian'
+
+    - name: Enable & start docker (deb)
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      when: ansible_os_family == 'Debian'
+
+# --- RHEL / CentOS -----------------------------------------------------------------
+- name: Apps | Docker (CentOS/RHEL)
+  hosts: app
+  become: true
+  tasks:
+    - name: Install dnf plugins
+      package:
+        name: dnf-plugins-core
+        state: present
+      when: ansible_os_family == 'RedHat'
+
+    - name: Add Docker repo (rpm)
+      command: >
+        dnf config-manager --add-repo
+        https://download.docker.com/linux/centos/docker-ce.repo
+      args:
+        creates: /etc/yum.repos.d/docker-ce.repo
+      when: ansible_os_family == 'RedHat'
+
+    - name: Install Docker CE (rpm)
+      package:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: ansible_os_family == 'RedHat'       
+
+    - name: Enable & start docker (rpm)
+      service:
+        name: docker
+        state: started
+        enabled: yes
+      when: ansible_os_family == 'RedHat'
+
+# --- DATABASE -----------------------------------------------------------------
+- name: Database | PostgreSQL
+  hosts: database
+  become: true
+  roles:
+    - role: postgres

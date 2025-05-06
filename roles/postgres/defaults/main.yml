@@ -1,0 +1,2 @@
+pg_version: 14
+pg_data_dir: "/var/lib/postgresql/{{ pg_version }}/main"
